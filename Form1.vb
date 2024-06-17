@@ -1,18 +1,18 @@
 ﻿Imports System.IO
 Imports System.Numerics
+Imports ScottPlot
 
 Public Class Form1
     Private integerList As New List(Of Double)()
     Private dftMagnitudes As New List(Of Double)()
 
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
-        ' Create an instance of the OpenFileDialog
+
         Dim openFileDialog1 As New OpenFileDialog()
 
         ' Set the filter for file types
         openFileDialog1.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*"
 
-        ' Show the Open File dialog
         If openFileDialog1.ShowDialog() = DialogResult.OK Then
             ' Get the path of the selected file
             Dim filePath As String = openFileDialog1.FileName
@@ -20,6 +20,8 @@ Public Class Form1
             ' Clear the previous data
             integerList.Clear()
             dftMagnitudes.Clear()
+
+            Label3.Text = Path.GetFileName(filePath)
 
             ' Read the file line by line
             Try
@@ -35,12 +37,11 @@ Public Class Form1
                     End While
                 End Using
 
-                Panel1.Invalidate()
                 ' Compute the DFT and magnitudes
                 ComputeDFT()
 
-                ' Refresh the Panel to trigger the Paint event
-                Panel2.Invalidate()
+                'Plot the input
+                PlotOriginalDataOnFormsPlot()
 
             Catch ex As Exception
                 MessageBox.Show("Error reading file: " & ex.Message)
@@ -63,72 +64,36 @@ Public Class Form1
         Next
     End Sub
 
-    Private Sub Panel1_Paint(sender As Object, e As PaintEventArgs) Handles Panel1.Paint
-        Dim g As Graphics = e.Graphics
-        Dim panelWidth As Integer = Panel1.ClientSize.Width
-        Dim panelHeight As Integer = Panel1.ClientSize.Height - 1
+    Private Sub PlotOriginalDataOnFormsPlot()
+        Dim xs = Enumerable.Range(0, integerList.Count).Select(Function(i) CDbl(i)).ToArray()
+        Dim ys = integerList.ToArray()
+        FormsPlot1.Plot.Clear()
 
-        If integerList.Count > 0 Then
-            ' Determine the scale factors
-            Dim maxValue As Double = integerList.Max()
-            Dim xScale As Single = panelWidth / integerList.Count
-            Dim yScale As Single = If(maxValue <> 0, panelHeight / maxValue, 1)
-
-            ' Draw the axes
-            g.DrawLine(Pens.Black, 0, panelHeight, panelWidth, panelHeight)
-            g.DrawLine(Pens.Black, 0, 0, 0, panelHeight)
-
-            ' Draw the graph
-            For i As Integer = 0 To integerList.Count - 1
-                Dim x As Single = i * xScale
-                Dim y As Single = panelHeight - (integerList(i) * yScale)
-                g.FillEllipse(Brushes.Blue, x, y, 0, 0)
-
-                If i > 0 Then
-                    Dim prevX As Single = (i - 1) * xScale
-                    Dim prevY As Single = panelHeight - (integerList(i - 1) * yScale)
-                    g.DrawLine(Pens.Blue, prevX, prevY, x, y)
-                End If
-            Next
-        End If
-    End Sub
-    Private Sub Panel2_Paint(sender As Object, e As PaintEventArgs) Handles Panel2.Paint
-        Dim g = e.Graphics
-        Dim panelWidth = Panel2.ClientSize.Width - 10
-        Dim panelHeight = Panel2.ClientSize.Height - 10
-
-        If dftMagnitudes.Count > 0 Then
-            ' Determine the scale factors
-            Dim maxValue = dftMagnitudes.Max
-            Dim xScale As Single = (panelWidth) / dftMagnitudes.Count
-            Dim yScale As Single = If(maxValue <> 0, panelHeight / maxValue, 1)
-
-            ' Draw the axes
-            g.DrawLine(Pens.Black, 0, panelHeight, panelWidth, panelHeight)
-            g.DrawLine(Pens.Black, 0, 0, 0, panelHeight)
-            'g.DrawLine(Pens.Black, 0, 0, panelWidth, 0)
-            'g.DrawLine(Pens.Black, panelWidth, 0, panelWidth, panelHeight)
-
-            ' Draw the graph
-            For i = 0 To dftMagnitudes.Count - 1
-                Dim x = i * xScale
-                Dim y As Single = panelHeight - dftMagnitudes(i) * yScale
-                g.FillEllipse(Brushes.Blue, x, y, 0, 0)
-
-                If i > 0 Then
-                    Dim prevX = (i - 1) * xScale
-                    Dim prevY As Single = panelHeight - dftMagnitudes(i - 1) * yScale
-                    g.DrawLine(Pens.Blue, prevX, prevY, x, y)
-                End If
-            Next
-        End If
+        Dim scatterPlot = FormsPlot1.Plot.Add.Scatter(xs, ys)
+        scatterPlot.MarkerShape = MarkerShape.None
+        FormsPlot1.Plot.Title("Original Data Plot")
+        FormsPlot1.Plot.XLabel("Time")
+        FormsPlot1.Plot.YLabel("Amplitude")
+        FormsPlot1.Plot.Axes.AutoScale()
+        FormsPlot1.Refresh()
     End Sub
 
-    Private Sub Label1_Click(sender As Object, e As EventArgs) Handles Label1.Click
+    Private Sub PlotDFTMagnitudesOnFormsPlot()
+        Dim xs = Enumerable.Range(0, dftMagnitudes.Count).Select(Function(i) CDbl(i * 22050 / dftMagnitudes.Count)).ToArray()
+        Dim ys = dftMagnitudes.ToArray()
+        FormsPlot2.Plot.Clear()
 
+        Dim scatterPlot = FormsPlot2.Plot.Add.Scatter(xs, ys)
+        scatterPlot.MarkerShape = MarkerShape.None
+        FormsPlot2.Plot.Title("DFT Magnitudes Plot")
+        FormsPlot2.Plot.XLabel("Frequency(Hz)")
+        FormsPlot2.Plot.YLabel("Magnitude")
+        FormsPlot2.Plot.Axes.AutoScale()
+        FormsPlot2.Refresh()
     End Sub
 
-    Private Sub Label2_Click(sender As Object, e As EventArgs) Handles Label2.Click
-
+    Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
+        ' Plot the DFT magnitudes
+        PlotDFTMagnitudesOnFormsPlot()
     End Sub
 End Class
